@@ -2,10 +2,9 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
 def main():
-    st.title("Home Page")
-
     if not st.session_state.get("logged_in", False):
         st.error("Please log in from the WOOD MATERIAL page.")
         return
