@@ -3,77 +3,89 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Set page to always wide
-st.set_page_config(layout="wide")
+def main():
+    st.title("Home Page")
 
-st.title("Data BOM for Fabric Material")
+    if not st.session_state.get("logged_in", False):
+        st.error("Please log in from the WOOD MATERIAL page.")
+        return
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-df = conn.read(worksheet="ORDER BY FABRIC", ttl=5)
-df = df.dropna(how="all")
+    # Google Sheets connection and data display
+    # Set page to always wide
+    st.set_page_config(layout="wide")
 
-# st.dataframe(df)
+    st.title("Data BOM for Fabric Material")
 
-# Convert date column to datetime
-date_column = 'TIMESTAMP'
-df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    df = conn.read(worksheet="ORDER BY FABRIC", ttl=5)
+    df = df.dropna(how="all")
 
-delivery_date_column = 'DELIVERY PLAN DATE'
-df[delivery_date_column] = pd.to_datetime(df[delivery_date_column], errors='coerce')
+    # st.dataframe(df)
 
-# Extract unique values
-df['month_year'] = df[date_column].dt.strftime('%b %Y')
-unique_months = df['month_year'].dropna().unique()
-unique_months = sorted(unique_months, key=lambda x: pd.to_datetime(x, format='%b %Y'), reverse=True)
+    # Convert date column to datetime
+    date_column = 'TIMESTAMP'
+    df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
 
-df['delivery_month_year'] = df[delivery_date_column].dt.strftime('%b %Y')
-unique_delivery_month = df['delivery_month_year'].dropna().unique()
-unique_delivery_month = sorted(unique_delivery_month, key=lambda x: pd.to_datetime(x, format='%b %Y'), reverse=True)
+    delivery_date_column = 'DELIVERY PLAN DATE'
+    df[delivery_date_column] = pd.to_datetime(df[delivery_date_column], errors='coerce')
 
-unique_category = df['CATEGORY'].dropna().unique()
-unique_trip = df['TRIP'].dropna().unique()
+    # Extract unique values
+    df['month_year'] = df[date_column].dt.strftime('%b %Y')
+    unique_months = df['month_year'].dropna().unique()
+    unique_months = sorted(unique_months, key=lambda x: pd.to_datetime(x, format='%b %Y'), reverse=True)
 
-# Sidebar for month filter
-# st.sidebar.title("Filters")
+    df['delivery_month_year'] = df[delivery_date_column].dt.strftime('%b %Y')
+    unique_delivery_month = df['delivery_month_year'].dropna().unique()
+    unique_delivery_month = sorted(unique_delivery_month, key=lambda x: pd.to_datetime(x, format='%b %Y'), reverse=True)
 
-selected_months = st.sidebar.multiselect("Select Month(s) by Orders", unique_months, default=unique_months)
-selected_category = st.sidebar.multiselect("Select Category(s)", unique_category, default=unique_category)
-selected_trip = st.sidebar.multiselect("Select Trip(s)", unique_trip, default=unique_trip)
-# selected_delivery_months = st.sidebar.multiselect("Select Month(s) by Delivery", unique_delivery_month, default=unique_delivery_month)
+    unique_category = df['CATEGORY'].dropna().unique()
+    unique_trip = df['TRIP'].dropna().unique()
 
-# Filter DataFrame by selected months
-filtered_df = df[df['month_year'].isin(selected_months) 
-                 & df['CATEGORY'].isin(selected_category) 
-                 & df['TRIP'].isin(selected_trip)
-                 ]
+    # Sidebar for month filter
+    # st.sidebar.title("Filters")
 
-# Display filtered DataFrame
-st.dataframe(filtered_df)
+    selected_months = st.sidebar.multiselect("Select Month(s) by Orders", unique_months, default=unique_months)
+    selected_category = st.sidebar.multiselect("Select Category(s)", unique_category, default=unique_category)
+    selected_trip = st.sidebar.multiselect("Select Trip(s)", unique_trip, default=unique_trip)
+    # selected_delivery_months = st.sidebar.multiselect("Select Month(s) by Delivery", unique_delivery_month, default=unique_delivery_month)
 
-material_wood_columns = [col for col in filtered_df.columns if 'MATERIAL FABRIC' in col]
-wood_columns = [col for col in filtered_df.columns if col.startswith('FABRIC')]
+    # Filter DataFrame by selected months
+    filtered_df = df[df['month_year'].isin(selected_months) 
+                    & df['CATEGORY'].isin(selected_category) 
+                    & df['TRIP'].isin(selected_trip)
+                    ]
 
-# Combine material wood columns into a single series without duplicates
-unique_materials = pd.Series(df[material_wood_columns].values.ravel()).dropna().unique()
+    # Display filtered DataFrame
+    st.dataframe(filtered_df)
 
-# Initialize a DataFrame to store the results
-result_data = [] 
+    material_wood_columns = [col for col in filtered_df.columns if 'MATERIAL FABRIC' in col]
+    wood_columns = [col for col in filtered_df.columns if col.startswith('FABRIC')]
 
-# Loop through each unique material and sum its corresponding wood values
-for material in unique_materials:
-    total_value = 0
-    for material_col, wood_col in zip(material_wood_columns, wood_columns):
-        material_mask = filtered_df[material_col] == material
-        wood_values = pd.to_numeric(filtered_df.loc[material_mask, wood_col], errors='coerce').dropna()
-        total_value += (wood_values * filtered_df.loc[material_mask, 'QTY']).sum()
-    result_data.append({'Fabric Material': material, 'Total Usage': total_value})
+    # Combine material wood columns into a single series without duplicates
+    unique_materials = pd.Series(df[material_wood_columns].values.ravel()).dropna().unique()
 
-result_df = pd.DataFrame(result_data)
-result_df = result_df.sort_values(by='Total Usage', ascending=False)
+    # Initialize a DataFrame to store the results
+    result_data = [] 
 
-st.subheader("Total Fabric Material Usage")
-result_df
+    # Loop through each unique material and sum its corresponding wood values
+    for material in unique_materials:
+        total_value = 0
+        for material_col, wood_col in zip(material_wood_columns, wood_columns):
+            material_mask = filtered_df[material_col] == material
+            wood_values = pd.to_numeric(filtered_df.loc[material_mask, wood_col], errors='coerce').dropna()
+            total_value += (wood_values * filtered_df.loc[material_mask, 'QTY']).sum()
+        result_data.append({'Fabric Material': material, 'Total Usage': total_value})
 
-# Create a bar chart using matplotlib
-st.subheader("Bar Chart of Total Usage by Fabric Material")
-st.bar_chart(result_df.set_index('Fabric Material'))
+    result_df = pd.DataFrame(result_data)
+    result_df = result_df.sort_values(by='Total Usage', ascending=False)
+
+    st.subheader("Total Fabric Material Usage")
+    result_df
+
+    # Create a bar chart using matplotlib
+    st.subheader("Bar Chart of Total Usage by Fabric Material")
+    st.bar_chart(result_df.set_index('Fabric Material'))
+
+if __name__ == "__main__":
+    main()
+
