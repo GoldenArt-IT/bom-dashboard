@@ -32,7 +32,7 @@ def main():
             if authenticate(username, password, credentials):
                 st.session_state.logged_in = True
                 st.session_state.show_success = True
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("Invalid username or password")
 
@@ -41,7 +41,7 @@ def main():
             st.success("Login successful!")
             time.sleep(3)
             st.session_state.show_success = False
-            st.rerun()
+            st.experimental_rerun()
 
         # Google Sheets connection and data display
 
@@ -50,7 +50,7 @@ def main():
 
         st.title("Data BOM for Wood Material")
 
-        conn = st.connection("gsheets", type=GSheetsConnection)
+        conn = st.experimental_connection("gsheets", type=GSheetsConnection)
         df = conn.read(worksheet="ORDER BY WOOD", ttl=5)
         df = df.dropna(how="all")
 
