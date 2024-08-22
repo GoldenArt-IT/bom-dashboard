@@ -32,7 +32,7 @@ def main():
             if authenticate(username, password, credentials):
                 st.session_state.logged_in = True
                 st.session_state.show_success = True
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Invalid username or password")
 
@@ -41,7 +41,7 @@ def main():
             st.success("Login successful!")
             time.sleep(3)
             st.session_state.show_success = False
-            st.experimental_rerun()
+            st.rerun()
 
         # Google Sheets connection and data display
 
