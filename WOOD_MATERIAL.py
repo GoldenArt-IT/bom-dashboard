@@ -50,7 +50,7 @@ def main():
 
         st.title("Data BOM for Wood Material")
 
-        conn = st.experimental_connection("gsheets", type=GSheetsConnection)
+        conn = st.connection("gsheets", type=GSheetsConnection)
         df = conn.read(worksheet="ORDER BY WOOD", ttl=5)
         df = df.dropna(how="all")
 
