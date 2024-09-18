@@ -51,10 +51,10 @@ def main():
         st.title("Data BOM for Wood Material")
 
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(worksheet="ORDER BY WOOD", ttl=300)
+        df = conn.read(worksheet="ORDER BY WOOD", ttl=5)
         df = df.dropna(how="all")
 
-        df_price_list = conn.read(worksheet="PRICE LIST", ttl=300)
+        df_price_list = conn.read(worksheet="PRICE LIST", ttl=5)
         df_price_list= df_price_list.dropna(how="all")
 
         # st.dataframe(df)
