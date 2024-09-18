@@ -54,6 +54,9 @@ def main():
         df = conn.read(worksheet="ORDER BY WOOD", ttl=5)
         df = df.dropna(how="all")
 
+        df_price_list = conn.read(worksheet="PRICE LIST", ttl=5)
+        df_price_list= df_price_list.dropna(how="all")
+
         # st.dataframe(df)
 
         # Convert date column to datetime
@@ -72,20 +75,27 @@ def main():
         unique_delivery_month = df['delivery_month_year'].dropna().unique()
         unique_delivery_month = sorted(unique_delivery_month, key=lambda x: pd.to_datetime(x, format='%b %Y'), reverse=True)
 
-        unique_category = df['CATEGORY'].dropna().unique()
+        # unique_category = df['CATEGORY'].dropna().unique()
         unique_trip = df['TRIP'].dropna().unique()
+        unique_pi = df['PI NUMBER'].dropna().unique()
 
         # Sidebar for month filter
         # st.sidebar.title("Filters")
 
+        pi_option = st.sidebar.radio("Choose to filter by specific PI(s):", ('No, select all PI(s)', 'Yes, filter select PI(s)'), index=0)
+        if pi_option == 'Yes, filter select PI(s)':
+            selected_pi = st.sidebar.multiselect("Select PI(s) by Orders", unique_pi)
+        else:
+            selected_pi = unique_pi
+        
         selected_months = st.sidebar.multiselect("Select Month(s) by Orders", unique_months, default=unique_months)
-        selected_category = st.sidebar.multiselect("Select Category(s)", unique_category, default=unique_category)
+        # selected_category = st.sidebar.multiselect("Select Category(s)", unique_category, default=unique_category)
         selected_trip = st.sidebar.multiselect("Select Trip(s)", unique_trip, default=unique_trip)
         # selected_delivery_months = st.sidebar.multiselect("Select Month(s) by Delivery", unique_delivery_month, default=unique_delivery_month)
 
         # Filter DataFrame by selected months
         filtered_df = df[df['month_year'].isin(selected_months) 
-                        & df['CATEGORY'].isin(selected_category) 
+                        & df['PI NUMBER'].isin(selected_pi) 
                         & df['TRIP'].isin(selected_trip)
                         ]
 
@@ -114,7 +124,10 @@ def main():
         result_df = result_df.sort_values(by='Total Usage', ascending=False)
 
         st.subheader("Total Wood Material Usage")
-        result_df
+        merge_result_price = pd.merge(result_df, df_price_list[['Description' ,'Unit Price']], left_on='Wood Material', right_on='Description', how='left')
+        merge_result_price['Total Price'] = merge_result_price['Total Usage'] * merge_result_price['Unit Price']
+        merge_result_price.drop(columns=['Description'], inplace=True)
+        merge_result_price
 
         # Create a bar chart using matplotlib
         st.subheader("Bar Chart of Total Usage by Wood Material")
