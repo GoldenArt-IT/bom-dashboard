@@ -51,10 +51,10 @@ def main():
         st.title("Data BOM for Wood Material")
 
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(worksheet="ORDER BY WOOD", ttl=5)
+        df = conn.read(worksheet="ORDER BY WOOD", ttl=300)
         df = df.dropna(how="all")
 
-        df_price_list = conn.read(worksheet="PRICE LIST", ttl=5)
+        df_price_list = conn.read(worksheet="PRICE LIST", ttl=300)
         df_price_list= df_price_list.dropna(how="all")
 
         # st.dataframe(df)
@@ -82,19 +82,27 @@ def main():
         # Sidebar for month filter
         # st.sidebar.title("Filters")
 
-        pi_option = st.sidebar.radio("Choose to filter by specific PI(s):", ('No, select all PI(s)', 'Yes, filter select PI(s)'), index=0)
-        if pi_option == 'Yes, filter select PI(s)':
+        pi_option = st.sidebar.radio("Choose Filter by Specific PI(s):", ('Select all PI(s)', 'Filter by PI(s)'), index=0)
+        if pi_option == 'Filter by PI(s)':
             selected_pi = st.sidebar.multiselect("Select PI(s) by Orders", unique_pi)
         else:
             selected_pi = unique_pi
         
-        selected_months = st.sidebar.multiselect("Select Month(s) by Orders", unique_months, default=unique_months)
+        date_option = st.sidebar.radio("Choose Filter by Date:", ('Order', 'Delivery'), index=0)
+        if date_option == 'Order':
+            selected_months = st.sidebar.multiselect("Select Month(s) by Orders", unique_months, default=unique_months)
+            selected_delivery_months = unique_delivery_month
+        else:
+            selected_delivery_months = st.sidebar.multiselect("Select Month(s) by Delivery", unique_delivery_month, default=unique_delivery_month)
+            selected_months = unique_months
+        
         # selected_category = st.sidebar.multiselect("Select Category(s)", unique_category, default=unique_category)
         selected_trip = st.sidebar.multiselect("Select Trip(s)", unique_trip, default=unique_trip)
-        # selected_delivery_months = st.sidebar.multiselect("Select Month(s) by Delivery", unique_delivery_month, default=unique_delivery_month)
+        
 
         # Filter DataFrame by selected months
         filtered_df = df[df['month_year'].isin(selected_months) 
+                        & df['delivery_month_year'].isin(selected_delivery_months)
                         & df['PI NUMBER'].isin(selected_pi) 
                         & df['TRIP'].isin(selected_trip)
                         ]
@@ -106,7 +114,7 @@ def main():
         wood_columns = [col for col in filtered_df.columns if col.startswith('WOOD')]
 
         # Combine material wood columns into a single series without duplicates
-        unique_materials = pd.Series(df[material_wood_columns].values.ravel()).dropna().unique()
+        unique_materials = pd.Series(df[material_wood_columns].values.ravel()).dropna().str.strip().str.upper().unique()
 
         # Initialize a DataFrame to store the results
         result_data = [] 
@@ -121,13 +129,16 @@ def main():
             result_data.append({'Wood Material': material, 'Total Usage': total_value})
 
         result_df = pd.DataFrame(result_data)
-        result_df = result_df.sort_values(by='Total Usage', ascending=False)
 
         st.subheader("Total Wood Material Usage")
+        df_price_list['Description'] = df_price_list['Description'].str.strip().str.upper()
         merge_result_price = pd.merge(result_df, df_price_list[['Description' ,'Unit Price']], left_on='Wood Material', right_on='Description', how='left')
         merge_result_price['Total Price'] = merge_result_price['Total Usage'] * merge_result_price['Unit Price']
         merge_result_price.drop(columns=['Description'], inplace=True)
-        merge_result_price
+        merge_result_price = merge_result_price.drop_duplicates(subset=['Wood Material'], keep='first')
+        merge_result_price = merge_result_price.sort_values(by='Total Price', ascending=False)
+
+        st.dataframe(merge_result_price)
 
         # Create a bar chart using matplotlib
         st.subheader("Bar Chart of Total Usage by Wood Material")
