@@ -43,9 +43,13 @@ def main():
     # unique_category = df['CATEGORY'].dropna().unique()
     unique_trip = df['TRIP'].dropna().unique()
     unique_pi = df['PI NUMBER'].dropna().unique()
+    
+    unique_plan_date = sorted(df['PLAN DATE'].dropna().unique())
 
     # Sidebar for month filter
     # st.sidebar.title("Filters")
+
+    selected_plan_date = st.sidebar.multiselect("Select Plan(s) Date", unique_plan_date)
 
     pi_option = st.sidebar.radio("Choose Filter by Specific PI(s):", ('Select all PI(s)', 'Filter by PI(s)'), index=0)
     if pi_option == 'Filter by PI(s)':
@@ -66,11 +70,13 @@ def main():
     
 
     # Filter DataFrame by selected months
-    filtered_df = df[df['month_year'].isin(selected_months) 
-                    & df['delivery_month_year'].isin(selected_delivery_months)
-                    & df['PI NUMBER'].isin(selected_pi) 
-                    & df['TRIP'].isin(selected_trip)
-                    ]
+    filtered_df = df[
+                        df['month_year'].isin(selected_months) & 
+                        df['delivery_month_year'].isin(selected_delivery_months) & 
+                        df['PI NUMBER'].isin(selected_pi) & 
+                        df['TRIP'].isin(selected_trip) & 
+                        (df['PLAN DATE'].isin(selected_plan_date) if selected_plan_date else True)
+                        ]
 
     # Display filtered DataFrame
     st.dataframe(filtered_df)
@@ -95,14 +101,27 @@ def main():
 
     result_df = pd.DataFrame(result_data)
 
-    st.subheader("Total Fabric Material Usage")
+    
     df_price_list['Description'] = df_price_list['Description'].str.strip().str.upper()
     merge_result_price = pd.merge(result_df, df_price_list[['Description' ,'Unit Price']], left_on='Fabric Material', right_on='Description', how='left')
     merge_result_price['Total Price'] = merge_result_price['Total Usage'] * merge_result_price['Unit Price']
     merge_result_price.drop(columns=['Description'], inplace=True)
+    merge_result_price = merge_result_price[merge_result_price['Total Usage'] > 0]
     merge_result_price = merge_result_price.drop_duplicates(subset=['Fabric Material'], keep='first')
     merge_result_price = merge_result_price.sort_values(by='Total Price', ascending=False)
 
+    # Key Metrics
+    total_pi, total_qty, total_material, total_price = st.columns(4)
+    with total_pi:
+        st.metric("Total PI", value=len(filtered_df))
+    with total_qty:
+        st.metric("Total QTY", value=filtered_df['QTY'].sum())
+    with total_material:
+        st.metric("Total Material", value=len(merge_result_price))
+    with total_price:
+        st.metric("Total Price", value="RM " + str(round(merge_result_price['Total Price'].sum(), 2)))
+
+    st.subheader("Total Fabric Material Usage")
     st.dataframe(merge_result_price)
 
     # Create a bar chart using matplotlib

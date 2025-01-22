@@ -145,7 +145,7 @@ def main():
         merge_result_price = merge_result_price.drop_duplicates(subset=['Wood Material'], keep='first')
         merge_result_price = merge_result_price.sort_values(by='Total Price', ascending=False)
 
-        # Key Matrics
+        # Key Metrics
         total_pi, total_qty, total_material, total_price = st.columns(4)
         with total_pi:
             st.metric("Total PI", value=len(filtered_df))
