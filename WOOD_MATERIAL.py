@@ -136,7 +136,7 @@ def main():
 
         result_df = pd.DataFrame(result_data)
 
-        st.subheader("Total Wood Material Usage")
+        # create table for material usage
         df_price_list['Description'] = df_price_list['Description'].str.strip().str.upper()
         merge_result_price = pd.merge(result_df, df_price_list[['Description' ,'Unit Price']], left_on='Wood Material', right_on='Description', how='left')
         merge_result_price['Total Price'] = merge_result_price['Total Usage'] * merge_result_price['Unit Price']
@@ -145,6 +145,20 @@ def main():
         merge_result_price = merge_result_price.drop_duplicates(subset=['Wood Material'], keep='first')
         merge_result_price = merge_result_price.sort_values(by='Total Price', ascending=False)
 
+        # Key Matrics
+        total_pi, total_qty, total_material, total_price = st.columns(4)
+        with total_pi:
+            st.metric("Total PI", value=len(filtered_df))
+        with total_qty:
+            st.metric("Total QTY", value=filtered_df['QTY'].sum())
+        with total_material:
+            st.metric("Total Material", value=len(merge_result_price))
+        with total_price:
+            st.metric("Total Price", value="RM " + str(round(merge_result_price['Total Price'].sum(), 2)))
+
+
+        # Display material usage table
+        st.subheader("Total Wood Material Usage")
         st.dataframe(merge_result_price)
 
         # Create a bar chart using matplotlib
